@@ -1508,5 +1508,66 @@
       showStatus('👋 ברוכים הבאים! התחל בהקלטה או העלה קובץ', 'info');
     }
   </script>
+  <style>
+    .bs-footer {
+        padding: 40px 20px;
+        text-align: center;
+        background: transparent;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        margin-top: 50px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .bs-logo {
+        width: 45px;
+        height: 45px;
+        background: linear-gradient(135deg, #38bdf8, #818cf8);
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 1.2rem;
+        border-radius: 12px;
+        margin: 0 auto 15px;
+        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+        letter-spacing: -1px;
+    }
+
+    .bs-title {
+        color: #f1f5f9;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: 0.5px;
+    }
+
+    .bs-subtitle {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        margin: 5px 0 0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .bs-copy {
+        font-size: 0.7rem;
+        color: #475569;
+        margin-top: 15px;
+    }
+
+    @media print {
+        .bs-footer { border-top: 1px solid #000; color: #000; }
+        .bs-logo { border: 1px solid #000; background: none; }
+        .bs-title, .bs-subtitle { color: #000; }
+    }
+</style>
+
+<footer class="bs-footer">
+    <div class="bs-logo">BS</div>
+    <p class="bs-title">בועז סעדה</p>
+    <p class="bs-subtitle">פתרונות יצירתיים</p>
+    <p class="bs-copy">© 2026 כל הזכויות שמורות</p>
+</footer>
 </body>
 </html>
