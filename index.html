@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="description" content="מחולל קול זמרים AI - הקלטה, שיבוט קול, אפקטים מקצועיים">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>🎤 מחולל קול זמרים AI</title>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #8b5cf6;
+      --secondary: #ec4899;
+      --gradient-start: #667eea;
+      --gradient-end: #764ba2;
+      --glass-bg: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.8);
+      --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      direction: rtl;
+      touch-action: manipulation;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header */
+    .app-header {
+      text-align: center;
+      padding: 30px 0;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+    }
+
+    .app-header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .app-header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+
+    /* Sections */
+    section {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 20px;
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+    }
+
+    section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      min-height: 60px;
+      font-size: 18px;
+      font-weight: 600;
+      font-family: 'Heebo', sans-serif;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #6d28d9 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--secondary) 0%, #db2777 100%);
+      color: white;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Recording Controls */
+    .recording-indicator {
+      display: none;
+      text-align: center;
+      padding: 15px;
+      background: rgba(239, 68, 68, 0.2);
+      border-radius: 12px;
+      margin: 15px 0;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .recording-indicator.active {
+      display: block;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .recording-time {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--danger);
+    }
+
+    /* Canvas */
+    #waveform {
+      width: 100%;
+      height: 120px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      margin: 15px 0;
+    }
+
+    /* Select & Input */
+    .select, .file-input-wrapper input[type="file"] {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      font-family: 'Heebo', sans-serif;
+      border: 2px solid var(--glass-border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      margin: 10px 0;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .select:focus, .file-input-wrapper input[type="file"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .select option {
+      background: var(--gradient-end);
+      color: white;
+    }
+
+    /* File Input */
+    .file-input-wrapper {
+      position: relative;
+      margin: 10px 0;
+    }
+
+    .file-input-label {
+      display: block;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px dashed var(--glass-border);
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .file-input-label:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--primary);
+    }
+
+    .file-input-wrapper input[type="file"] {
+      display: none;
+    }
+
+    .file-name {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* Effects Controls */
+    .effect-control {
+      margin: 20px 0;
+    }
+
+    .effect-control label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .effect-value {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+    }
+
+    /* Sliders */
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.2);
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    .slider::-webkit-slider-thumb:active {
+      transform: scale(0.95);
+    }
+
+    .slider::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Audio Player */
+    .audio-player {
+      display: none;
+      margin: 20px 0;
+    }
+
+    .audio-player.active {
+      display: block;
+    }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .play-pause-btn {
+      width: 60px;
+      height: 60px;
+      min-height: unset;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .progress-bar {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .time-display {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      min-width: 100px;
+      text-align: center;
+    }
+
+    /* Status Messages */
+    .status-message {
+      padding: 15px;
+      border-radius: 12px;
+      margin: 15px 0;
+      text-align: center;
+      font-weight: 600;
+      display: none;
+    }
+
+    .status-message.show {
+      display: block;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .status-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+
+    .status-error {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+
+    .status-info {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .app-header h1 {
+        font-size: 2rem;
+      }
+      
+      section {
+        padding: 20px;
+      }
+
+      .btn {
+        min-height: 55px;
+        font-size: 16px;
+      }
+    }
+
+    /* Install Prompt */
+    .install-prompt {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      display: none;
+      z-index: 1000;
+      animation: slideUp 0.5s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .install-prompt.show {
+      display: block;
+    }
+
+    .install-prompt-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .install-prompt-text {
+      flex: 1;
+    }
+
+    .install-prompt-text h3 {
+      font-size: 1.1rem;
+      margin-bottom: 5px;
+    }
+
+    .install-prompt-text p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .install-btn, .install-close-btn {
+      padding: 10px 20px;
+      background: white;
+      color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Heebo', sans-serif;
+    }
+
+    .install-close-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 10px 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <h1>🎤 מחולל קול זמרים AI</h1>
+      <p>הקלטה • שיבוט קול • אפקטים מקצועיים</p>
+    </header>
+
+    <!-- Status Message -->
+    <div id="statusMessage" class="status-message"></div>
+
+    <!-- Recording Section -->
+    <section id="recordingSection">
+      <h2>🎙️ הקלטת ווקאל</h2>
+      
+      <div class="recording-indicator" id="recordingIndicator">
+        <div class="recording-time" id="recordingTime">00:00</div>
+        <div>מקליט...</div>
+      </div>
+
+      <canvas id="waveform"></canvas>
+
+      <div class="btn-group">
+        <button id="recordBtn" class="btn btn-primary">
+          🎙️ התחל הקלטה
+        </button>
+        <button id="stopBtn" class="btn btn-danger" disabled>
+          ⏹️ עצור הקלטה
+        </button>
+      </div>
+
+      <button id="uploadAudioBtn" class="btn btn-secondary">
+        📁 העלה קובץ אודיו
+      </button>
+      <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+    </section>
+
+    <!-- Voice Clone Section -->
+    <section id="voiceCloneSection">
+      <h2>🎭 שיבוט קול זמרים</h2>
+      
+      <select id="voiceSelect" class="select">
+        <option value="">בחר זמר מהרשימה...</option>
+        <option value="male-powerful">זמר גברי עוצמתי 🎤</option>
+        <option value="female-soft">זמרת נשית עדינה 🎵</option>
+        <option value="male-rock">רוקר גברי 🎸</option>
+        <option value="female-pop">פופ נשי 🌟</option>
+        <option value="male-rap">ראפר 🎧</option>
+        <option value="original">השאר מקורי (ללא שיבוט)</option>
+      </select>
+
+      <button id="cloneBtn" class="btn btn-primary" disabled>
+        ✨ שבט קול
+      </button>
+
+      <div class="status-message status-info">
+        💡 טיפ: הקלט לפחות 10 שניות לתוצאות טובות יותר
+      </div>
+    </section>
+
+    <!-- Effects Section -->
+    <section id="effectsSection">
+      <h2>🎚️ אפקטים אודיו</h2>
+
+      <div class="effect-control">
+        <label>
+          <span>🌊 Reverb (הד חלל)</span>
+          <span class="effect-value" id="reverbValue">0%</span>
+        </label>
+        <input type="range" class="slider" id="reverbSlider" min="0" max="100" value="0">
+      </div>
+
+      <div class="effect-control">
+        <label>
+          <span>📢 Echo (הד כפול)</span>
+          <span class="effect-value" id="echoValue">0%</span>
+        </label>
+        <input type="range" class="slider" id="echoSlider" min="0" max="100" value="0">
+      </div>
+
+      <div class="effect-control">
+        <label>
+          <span>🎵 Pitch (גובה צליל)</span>
+          <span class="effect-value" id="pitchValue">0</span>
+        </label>
+        <input type="range" class="slider" id="pitchSlider" min="-12" max="12" value="0" step="1">
+      </div>
+
+      <div class="effect-control">
+        <label>
+          <span>🎛️ Bass (בס)</span>
+          <span class="effect-value" id="bassValue">0dB</span>
+        </label>
+        <input type="range" class="slider" id="bassSlider" min="-20" max="20" value="0">
+      </div>
+
+      <div class="effect-control">
+        <label>
+          <span>🎚️ Treble (טרבל)</span>
+          <span class="effect-value" id="trebleValue">0dB</span>
+        </label>
+        <input type="range" class="slider" id="trebleSlider" min="-20" max="20" value="0">
+      </div>
+
+      <button id="applyEffectsBtn" class="btn btn-success" disabled>
+        ✅ החל אפקטים
+      </button>
+    </section>
+
+    <!-- Backing Track Section -->
+    <section id="backingTrackSection">
+      <h2>🎹 פלייבק / קריוקי</h2>
+
+      <div class="file-input-wrapper">
+        <label for="backingTrackInput" class="file-input-label">
+          📂 לחץ להעלאת קובץ מוזיקת רקע
+        </label>
+        <input type="file" id="backingTrackInput" accept="audio/*">
+        <div class="file-name" id="backingFileName">לא נבחר קובץ</div>
+      </div>
+
+      <div class="effect-control">
+        <label>
+          <span>🔊 עוצמת מוזיקת רקע</span>
+          <span class="effect-value" id="backingVolumeValue">50%</span>
+        </label>
+        <input type="range" class="slider" id="backingVolumeSlider" min="0" max="100" value="50">
+      </div>
+
+      <div class="effect-control">
+        <label>
+          <span>🎤 עוצמת ווקאל</span>
+          <span class="effect-value" id="vocalVolumeValue">80%</span>
+        </label>
+        <input type="range" class="slider" id="vocalVolumeSlider" min="0" max="100" value="80">
+      </div>
+
+      <button id="mixBtn" class="btn btn-primary" disabled>
+        🎵 ערבב ווקאל + מוזיקת רקע
+      </button>
+    </section>
+
+    <!-- Player Section -->
+    <section id="playerSection">
+      <h2>🎧 נגן וייצוא</h2>
+
+      <div class="audio-player" id="audioPlayer">
+        <div class="player-controls">
+          <button id="playPauseBtn" class="btn btn-primary play-pause-btn">
+            ▶️
+          </button>
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+        </div>
+      </div>
+
+      <button id="exportBtn" class="btn btn-success" disabled>
+        💾 ייצא MP3
+      </button>
+
+      <button id="resetBtn" class="btn btn-secondary">
+        🔄 אתחל הכל
+      </button>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>נוצר עם ❤️ באמצעות Web Audio API</p>
+      <p>תומך ב-<strong>iOS</strong> • <strong>Android</strong> • <strong>Desktop</strong></p>
+    </footer>
+  </div>
+
+  <!-- Install Prompt -->
+  <div class="install-prompt" id="installPrompt">
+    <div class="install-prompt-content">
+      <div class="install-prompt-text">
+        <h3>📱 התקן כאפליקציה</h3>
+        <p>גש מהר יותר למחולל הקול</p>
+      </div>
+      <button class="install-btn" id="installBtn">התקן</button>
+      <button class="install-close-btn" id="installCloseBtn">✕</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // Global Variables & Audio Context
+    // ============================================
+    let audioContext;
+    let analyser;
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordedBlob = null;
+    let isRecording = false;
+    let recordingStartTime = 0;
+    let recordingInterval;
+    let currentAudioBuffer = null;
+    let backingTrackBuffer = null;
+    let mixedAudioBuffer = null;
+    let currentSourceNode = null;
+    let isPlaying = false;
+    let animationId;
+
+    // Effects nodes
+    let reverbNode, echoNode, echoGainNode, echoFeedbackNode;
+    let bassNode, trebleNode;
+    let vocalGainNode, backingGainNode;
+
+    // PWA Install
+    let deferredPrompt;
+
+    // ============================================
+    // DOM Elements
+    // ============================================
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const uploadAudioBtn = document.getElementById('uploadAudioBtn');
+    const audioFileInput = document.getElementById('audioFileInput');
+    const recordingIndicator = document.getElementById('recordingIndicator');
+    const recordingTime = document.getElementById('recordingTime');
+    const waveformCanvas = document.getElementById('waveform');
+    const canvasCtx = waveformCanvas.getContext('2d');
+
+    const voiceSelect = document.getElementById('voiceSelect');
+    const cloneBtn = document.getElementById('cloneBtn');
+
+    const reverbSlider = document.getElementById('reverbSlider');
+    const reverbValue = document.getElementById('reverbValue');
+    const echoSlider = document.getElementById('echoSlider');
+    const echoValue = document.getElementById('echoValue');
+    const pitchSlider = document.getElementById('pitchSlider');
+    const pitchValue = document.getElementById('pitchValue');
+    const bassSlider = document.getElementById('bassSlider');
+    const bassValue = document.getElementById('bassValue');
+    const trebleSlider = document.getElementById('trebleSlider');
+    const trebleValue = document.getElementById('trebleValue');
+    const applyEffectsBtn = document.getElementById('applyEffectsBtn');
+
+    const backingTrackInput = document.getElementById('backingTrackInput');
+    const backingFileName = document.getElementById('backingFileName');
+    const backingVolumeSlider = document.getElementById('backingVolumeSlider');
+    const backingVolumeValue = document.getElementById('backingVolumeValue');
+    const vocalVolumeSlider = document.getElementById('vocalVolumeSlider');
+    const vocalVolumeValue = document.getElementById('vocalVolumeValue');
+    const mixBtn = document.getElementById('mixBtn');
+
+    const audioPlayer = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const exportBtn = document.getElementById('exportBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const statusMessage = document.getElementById('statusMessage');
+
+    const installPrompt = document.getElementById('installPrompt');
+    const installBtn = document.getElementById('installBtn');
+    const installCloseBtn = document.getElementById('installCloseBtn');
+
+    // ============================================
+    // Utility Functions
+    // ============================================
+    function showStatus(message, type = 'info') {
+      statusMessage.textContent = message;
+      statusMessage.className = 'status-message show status-' + type;
+      setTimeout(() => {
+        statusMessage.classList.remove('show');
+      }, 4000);
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function checkBrowserSupport() {
+      if (!window.AudioContext && !window.webkitAudioContext) {
+        showStatus('❌ הדפדפן לא תומך ב-Web Audio API', 'error');
+        return false;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showStatus('❌ הדפדפן לא תומך בהקלטת אודיו', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    function initAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        
+        // Initialize effects nodes
+        initEffectsNodes();
+      }
+      
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+    }
+
+    function initEffectsNodes() {
+      // Reverb (using ConvolverNode with synthetic impulse response)
+      reverbNode = audioContext.createConvolver();
+      createReverbImpulse(2, 0.5);
+
+      // Echo/Delay
+      echoNode = audioContext.createDelay(5.0);
+      echoGainNode = audioContext.createGain();
+      echoFeedbackNode = audioContext.createGain();
+      echoNode.delayTime.value = 0.3;
+      echoFeedbackNode.gain.value = 0;
+
+      // EQ
+      bassNode = audioContext.createBiquadFilter();
+      bassNode.type = 'lowshelf';
+      bassNode.frequency.value = 200;
+      bassNode.gain.value = 0;
+
+      trebleNode = audioContext.createBiquadFilter();
+      trebleNode.type = 'highshelf';
+      trebleNode.frequency.value = 3000;
+      trebleNode.gain.value = 0;
+
+      // Gain nodes
+      vocalGainNode = audioContext.createGain();
+      vocalGainNode.gain.value = 0.8;
+      backingGainNode = audioContext.createGain();
+      backingGainNode.gain.value = 0.5;
+    }
+
+    function createReverbImpulse(duration, decay) {
+      const sampleRate = audioContext.sampleRate;
+      const length = sampleRate * duration;
+      const impulse = audioContext.createBuffer(2, length, sampleRate);
+      const left = impulse.getChannelData(0);
+      const right = impulse.getChannelData(1);
+
+      for (let i = 0; i < length; i++) {
+        left[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+        right[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+
+      reverbNode.buffer = impulse;
+    }
+
+    // ============================================
+    // Recording Functions
+    // ============================================
+    async function startRecording() {
+      if (!checkBrowserSupport()) return;
+
+      try {
+        initAudioContext();
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000
+          }
+        });
+
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+        });
+
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          const mimeType = mediaRecorder.mimeType;
+          recordedBlob = new Blob(audioChunks, { type: mimeType });
+          
+          // Convert to AudioBuffer
+          const arrayBuffer = await recordedBlob.arrayBuffer();
+          currentAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          
+          showStatus('✅ הקלטה הסתיימה בהצלחה!', 'success');
+          cloneBtn.disabled = false;
+          applyEffectsBtn.disabled = false;
+          exportBtn.disabled = false;
+          audioPlayer.classList.add('active');
+          
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        // Connect to analyser for visualization
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        mediaRecorder.start(100);
+        isRecording = true;
+        recordingStartTime = Date.now();
+        
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+        recordingIndicator.classList.add('active');
+
+        // Update recording time
+        recordingInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+          recordingTime.textContent = formatTime(elapsed);
+        }, 1000);
+
+        // Start visualization
+        visualizeWaveform();
+
+        showStatus('🎙️ מקליט...', 'info');
+
+      } catch (error) {
+        console.error('Recording error:', error);
+        showStatus('❌ שגיאה בהקלטה: ' + error.message, 'error');
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+        recordingIndicator.classList.remove('active');
+        
+        clearInterval(recordingInterval);
+        cancelAnimationFrame(animationId);
+      }
+    }
+
+    function visualizeWaveform() {
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const width = waveformCanvas.width = waveformCanvas.offsetWidth;
+      const height = waveformCanvas.height = waveformCanvas.offsetHeight;
+
+      function draw() {
+        animationId = requestAnimationFrame(draw);
+
+        analyser.getByteTimeDomainData(dataArray);
+
+        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        canvasCtx.fillRect(0, 0, width, height);
+
+        canvasCtx.lineWidth = 3;
+        canvasCtx.strokeStyle = '#8b5cf6';
+        canvasCtx.beginPath();
+
+        const sliceWidth = width / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * height) / 2;
+
+          if (i === 0) {
+            canvasCtx.moveTo(x, y);
+          } else {
+            canvasCtx.lineTo(x, y);
+          }
+
+          x += sliceWidth;
+        }
+
+        canvasCtx.lineTo(width, height / 2);
+        canvasCtx.stroke();
+      }
+
+      draw();
+    }
+
+    // ============================================
+    // File Upload
+    // ============================================
+    async function handleAudioUpload(file) {
+      if (!file) return;
+
+      try {
+        initAudioContext();
+        
+        const arrayBuffer = await file.arrayBuffer();
+        currentAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        showStatus('✅ קובץ הועלה בהצלחה!', 'success');
+        cloneBtn.disabled = false;
+        applyEffectsBtn.disabled = false;
+        exportBtn.disabled = false;
+        audioPlayer.classList.add('active');
+        
+      } catch (error) {
+        console.error('Upload error:', error);
+        showStatus('❌ שגיאה בטעינת הקובץ', 'error');
+      }
+    }
+
+    async function handleBackingTrackUpload(file) {
+      if (!file) return;
+
+      try {
+        initAudioContext();
+        
+        const arrayBuffer = await file.arrayBuffer();
+        backingTrackBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        backingFileName.textContent = file.name;
+        showStatus('✅ מוזיקת רקע נטענה!', 'success');
+        
+        if (currentAudioBuffer) {
+          mixBtn.disabled = false;
+        }
+        
+      } catch (error) {
+        console.error('Backing track error:', error);
+        showStatus('❌ שגיאה בטעינת מוזיקת הרקע', 'error');
+      }
+    }
+
+    // ============================================
+    // Voice Cloning (Simulated)
+    // ============================================
+    async function cloneVoice() {
+      const selectedVoice = voiceSelect.value;
+      
+      if (!selectedVoice || selectedVoice === 'original') {
+        showStatus('💡 נשאר עם הקול המקורי', 'info');
+        return;
+      }
+
+      showStatus('🎭 משבט קול... (סימולציה)', 'info');
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // In a real app, you would send the audio to Fish Audio API here
+      // For this demo, we'll just show a success message
+      
+      showStatus('✨ שיבוט קול הושלם! (דמו)', 'success');
+    }
+
+    // ============================================
+    // Effects Application
+    // ============================================
+    function applyEffects() {
+      if (!currentAudioBuffer) {
+        showStatus('❌ אין אודיו להחלת אפקטים', 'error');
+        return;
+      }
+
+      showStatus('🎚️ מחיל אפקטים...', 'info');
+
+      // Create offline context for processing
+      const offlineContext = new OfflineAudioContext(
+        currentAudioBuffer.numberOfChannels,
+        currentAudioBuffer.length,
+        currentAudioBuffer.sampleRate
+      );
+
+      // Create source
+      const source = offlineContext.createBufferSource();
+      source.buffer = currentAudioBuffer;
+
+      // Create effects chain
+      const offlineReverb = offlineContext.createConvolver();
+      offlineReverb.buffer = reverbNode.buffer;
+
+      const offlineDelay = offlineContext.createDelay(5.0);
+      offlineDelay.delayTime.value = echoNode.delayTime.value;
+
+      const offlineFeedback = offlineContext.createGain();
+      offlineFeedback.gain.value = echoFeedbackNode.gain.value;
+
+      const offlineBass = offlineContext.createBiquadFilter();
+      offlineBass.type = 'lowshelf';
+      offlineBass.frequency.value = 200;
+      offlineBass.gain.value = bassNode.gain.value;
+
+      const offlineTreble = offlineContext.createBiquadFilter();
+      offlineTreble.type = 'highshelf';
+      offlineTreble.frequency.value = 3000;
+      offlineTreble.gain.value = trebleNode.gain.value;
+
+      const dryGain = offlineContext.createGain();
+      const wetGain = offlineContext.createGain();
+      const reverbAmount = parseFloat(reverbSlider.value) / 100;
+      dryGain.gain.value = 1 - reverbAmount;
+      wetGain.gain.value = reverbAmount;
+
+      // Connect chain
+      source.connect(offlineBass);
+      offlineBass.connect(offlineTreble);
+      
+      // Dry path
+      offlineTreble.connect(dryGain);
+      dryGain.connect(offlineContext.destination);
+      
+      // Wet path (reverb)
+      offlineTreble.connect(offlineReverb);
+      offlineReverb.connect(wetGain);
+      wetGain.connect(offlineContext.destination);
+      
+      // Echo feedback loop
+      offlineTreble.connect(offlineDelay);
+      offlineDelay.connect(offlineFeedback);
+      offlineFeedback.connect(offlineDelay);
+      offlineDelay.connect(offlineContext.destination);
+
+      source.start(0);
+
+      offlineContext.startRendering().then((renderedBuffer) => {
+        currentAudioBuffer = renderedBuffer;
+        showStatus('✅ אפקטים הוחלו בהצלחה!', 'success');
+      }).catch((error) => {
+        console.error('Effects error:', error);
+        showStatus('❌ שגיאה בהחלת אפקטים', 'error');
+      });
+    }
+
+    // ============================================
+    // Mixing
+    // ============================================
+    function mixAudio() {
+      if (!currentAudioBuffer || !backingTrackBuffer) {
+        showStatus('❌ נדרש ווקאל ומוזיקת רקע', 'error');
+        return;
+      }
+
+      showStatus('🎵 מערבב...', 'info');
+
+      const maxLength = Math.max(currentAudioBuffer.length, backingTrackBuffer.length);
+      const numberOfChannels = 2;
+      const sampleRate = currentAudioBuffer.sampleRate;
+
+      const offlineContext = new OfflineAudioContext(numberOfChannels, maxLength, sampleRate);
+
+      // Vocal source
+      const vocalSource = offlineContext.createBufferSource();
+      vocalSource.buffer = currentAudioBuffer;
+      const vocalGain = offlineContext.createGain();
+      vocalGain.gain.value = parseFloat(vocalVolumeSlider.value) / 100;
+
+      // Backing track source
+      const backingSource = offlineContext.createBufferSource();
+      backingSource.buffer = backingTrackBuffer;
+      const backingGain = offlineContext.createGain();
+      backingGain.gain.value = parseFloat(backingVolumeSlider.value) / 100;
+
+      // Connect
+      vocalSource.connect(vocalGain);
+      vocalGain.connect(offlineContext.destination);
+
+      backingSource.connect(backingGain);
+      backingGain.connect(offlineContext.destination);
+
+      vocalSource.start(0);
+      backingSource.start(0);
+
+      offlineContext.startRendering().then((mixedBuffer) => {
+        mixedAudioBuffer = mixedBuffer;
+        currentAudioBuffer = mixedBuffer; // Use mixed as current
+        showStatus('✅ ערבוב הושלם!', 'success');
+      }).catch((error) => {
+        console.error('Mixing error:', error);
+        showStatus('❌ שגיאה בערבוב', 'error');
+      });
+    }
+
+    // ============================================
+    // Playback
+    // ============================================
+    function togglePlayPause() {
+      if (!currentAudioBuffer) {
+        showStatus('❌ אין אודיו לניגון', 'error');
+        return;
+      }
+
+      if (isPlaying) {
+        pauseAudio();
+      } else {
+        playAudio();
+      }
+    }
+
+    function playAudio() {
+      initAudioContext();
+
+      currentSourceNode = audioContext.createBufferSource();
+      currentSourceNode.buffer = currentAudioBuffer;
+      currentSourceNode.connect(audioContext.destination);
+
+      const startOffset = (currentSourceNode.context.currentTime * currentAudioBuffer.sampleRate) % currentAudioBuffer.length;
+      currentSourceNode.start(0, startOffset / currentAudioBuffer.sampleRate);
+
+      currentSourceNode.onended = () => {
+        isPlaying = false;
+        playPauseBtn.textContent = '▶️';
+        progressFill.style.width = '0%';
+      };
+
+      isPlaying = true;
+      playPauseBtn.textContent = '⏸️';
+      
+      updateProgress();
+    }
+
+    function pauseAudio() {
+      if (currentSourceNode) {
+        currentSourceNode.stop();
+        currentSourceNode = null;
+      }
+      isPlaying = false;
+      playPauseBtn.textContent = '▶️';
+    }
+
+    function updateProgress() {
+      if (!isPlaying || !currentSourceNode) return;
+
+      const duration = currentAudioBuffer.duration;
+      const currentTime = audioContext.currentTime - currentSourceNode.context.currentTime;
+      
+      const progress = (currentTime / duration) * 100;
+      progressFill.style.width = Math.min(progress, 100) + '%';
+      
+      timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+
+      if (isPlaying) {
+        requestAnimationFrame(updateProgress);
+      }
+    }
+
+    // ============================================
+    // Export
+    // ============================================
+    async function exportAudio() {
+      if (!currentAudioBuffer) {
+        showStatus('❌ אין אודיו לייצוא', 'error');
+        return;
+      }
+
+      showStatus('💾 מייצא...', 'info');
+
+      try {
+        // Convert AudioBuffer to WAV
+        const wav = audioBufferToWav(currentAudioBuffer);
+        const blob = new Blob([wav], { type: 'audio/wav' });
+
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `voice-clone-${Date.now()}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showStatus('✅ הקובץ הורד בהצלחה!', 'success');
+
+      } catch (error) {
+        console.error('Export error:', error);
+        showStatus('❌ שגיאה בייצוא', 'error');
+      }
+    }
+
+    function audioBufferToWav(buffer) {
+      const length = buffer.length * buffer.numberOfChannels * 2 + 44;
+      const arrayBuffer = new ArrayBuffer(length);
+      const view = new DataView(arrayBuffer);
+      const channels = [];
+      let offset = 0;
+      let pos = 0;
+
+      // Write WAV header
+      setUint32(0x46464952); // "RIFF"
+      setUint32(length - 8); // file length - 8
+      setUint32(0x45564157); // "WAVE"
+
+      setUint32(0x20746d66); // "fmt " chunk
+      setUint32(16); // length = 16
+      setUint16(1); // PCM (uncompressed)
+      setUint16(buffer.numberOfChannels);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels); // avg. bytes/sec
+      setUint16(buffer.numberOfChannels * 2); // block-align
+      setUint16(16); // 16-bit
+
+      setUint32(0x61746164); // "data" - chunk
+      setUint32(length - pos - 4); // chunk length
+
+      // Write interleaved data
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+      }
+
+      while (pos < length) {
+        for (let i = 0; i < buffer.numberOfChannels; i++) {
+          let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+
+      return arrayBuffer;
+
+      function setUint16(data) {
+        view.setUint16(pos, data, true);
+        pos += 2;
+      }
+
+      function setUint32(data) {
+        view.setUint32(pos, data, true);
+        pos += 4;
+      }
+    }
+
+    // ============================================
+    // Reset
+    // ============================================
+    function resetAll() {
+      // Stop playback
+      if (isPlaying) {
+        pauseAudio();
+      }
+
+      // Clear buffers
+      currentAudioBuffer = null;
+      backingTrackBuffer = null;
+      mixedAudioBuffer = null;
+      recordedBlob = null;
+
+      // Reset UI
+      cloneBtn.disabled = true;
+      applyEffectsBtn.disabled = true;
+      mixBtn.disabled = true;
+      exportBtn.disabled = true;
+      audioPlayer.classList.remove('active');
+
+      // Reset sliders
+      reverbSlider.value = 0;
+      echoSlider.value = 0;
+      pitchSlider.value = 0;
+      bassSlider.value = 0;
+      trebleSlider.value = 0;
+      updateSliderValues();
+
+      backingFileName.textContent = 'לא נבחר קובץ';
+      voiceSelect.value = '';
+
+      showStatus('🔄 הכל אותחל', 'info');
+    }
+
+    // ============================================
+    // Slider Updates
+    // ============================================
+    function updateSliderValues() {
+      reverbValue.textContent = reverbSlider.value + '%';
+      echoValue.textContent = echoSlider.value + '%';
+      pitchValue.textContent = pitchSlider.value;
+      bassValue.textContent = bassSlider.value + 'dB';
+      trebleValue.textContent = trebleSlider.value + 'dB';
+      backingVolumeValue.textContent = backingVolumeSlider.value + '%';
+      vocalVolumeValue.textContent = vocalVolumeSlider.value + '%';
+
+      // Update effects nodes
+      if (audioContext) {
+        const reverbAmount = parseFloat(reverbSlider.value) / 100;
+        createReverbImpulse(2, 1 - reverbAmount);
+
+        const echoAmount = parseFloat(echoSlider.value) / 100;
+        echoFeedbackNode.gain.value = echoAmount * 0.6;
+
+        bassNode.gain.value = parseFloat(bassSlider.value);
+        trebleNode.gain.value = parseFloat(trebleSlider.value);
+      }
+    }
+
+    // ============================================
+    // PWA Install
+    // ============================================
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installPrompt.classList.add('show');
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        showStatus('✅ האפליקציה הותקנה!', 'success');
+      }
+      
+      deferredPrompt = null;
+      installPrompt.classList.remove('show');
+    });
+
+    installCloseBtn.addEventListener('click', () => {
+      installPrompt.classList.remove('show');
+    });
+
+    // ============================================
+    // Event Listeners
+    // ============================================
+    recordBtn.addEventListener('click', startRecording);
+    stopBtn.addEventListener('click', stopRecording);
+    uploadAudioBtn.addEventListener('click', () => audioFileInput.click());
+    audioFileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) {
+        handleAudioUpload(e.target.files[0]);
+      }
+    });
+
+    cloneBtn.addEventListener('click', cloneVoice);
+
+    reverbSlider.addEventListener('input', updateSliderValues);
+    echoSlider.addEventListener('input', updateSliderValues);
+    pitchSlider.addEventListener('input', updateSliderValues);
+    bassSlider.addEventListener('input', updateSliderValues);
+    trebleSlider.addEventListener('input', updateSliderValues);
+    backingVolumeSlider.addEventListener('input', updateSliderValues);
+    vocalVolumeSlider.addEventListener('input', updateSliderValues);
+
+    applyEffectsBtn.addEventListener('click', applyEffects);
+
+    backingTrackInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) {
+        handleBackingTrackUpload(e.target.files[0]);
+      }
+    });
+
+    mixBtn.addEventListener('click', mixAudio);
+
+    playPauseBtn.addEventListener('click', togglePlayPause);
+    exportBtn.addEventListener('click', exportAudio);
+    resetBtn.addEventListener('click', resetAll);
+
+    // Progress bar click
+    progressBar.addEventListener('click', (e) => {
+      if (!currentAudioBuffer) return;
+      
+      const rect = progressBar.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percent = x / rect.width;
+      
+      if (isPlaying) {
+        pauseAudio();
+      }
+      
+      // Would need to implement seeking properly
+      showStatus('🔄 עדיין לא תומך בדילוג', 'info');
+    });
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch((error) => console.error('Service Worker registration failed:', error));
+    }
+
+    // Initialize
+    updateSliderValues();
+    
+    // Check browser support on load
+    if (!checkBrowserSupport()) {
+      showStatus('⚠️ הדפדפן לא נתמך במלואו', 'error');
+    } else {
+      showStatus('👋 ברוכים הבאים! התחל בהקלטה או העלה קובץ', 'info');
+    }
+  </script>
+</body>
+</html>
