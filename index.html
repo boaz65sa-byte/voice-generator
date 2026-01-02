@@ -1,0 +1,2502 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="description" content="מחולל קול זמרים AI - הקלט, הוסף אפקטים בזמן אמת, ושבט קולות בחינם!">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>🎤 מחולל קול זמרים AI - עם אפקטים בזמן אמת</title>
+  
+  <style>
+    /* ============================================
+       GLOBAL STYLES & VARIABLES
+       ============================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Colors */
+      --primary: #8b5cf6;
+      --primary-dark: #7c3aed;
+      --primary-light: #a78bfa;
+      --secondary: #ec4899;
+      --secondary-dark: #db2777;
+      --accent: #f59e0b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --glass-bg: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.8);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      --gradient-start: #667eea;
+      --gradient-end: #764ba2;
+      
+      /* Spacing */
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      
+      /* Border Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+      
+      /* Transitions */
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.3s ease;
+      --transition-slow: 0.5s ease;
+    }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      direction: rtl;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      touch-action: manipulation;
+    }
+
+    /* ============================================
+       HEADER
+       ============================================ */
+    .app-header {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: var(--spacing-lg);
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+
+    .app-header h1 {
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 0%, var(--primary-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .app-header p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+
+    /* ============================================
+       CONTAINER
+       ============================================ */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--spacing-lg);
+    }
+
+    /* ============================================
+       GLASS PANEL (BASE COMPONENT)
+       ============================================ */
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--glass-border);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+      box-shadow: var(--shadow);
+      transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    }
+
+    .glass-panel:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .panel-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-md);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    /* ============================================
+       RECORDING SECTION
+       ============================================ */
+    .recording-section {
+      position: relative;
+    }
+
+    .recording-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      padding: var(--spacing-md);
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-md);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .recording-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: var(--danger);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    .recording-timer {
+      font-family: 'Courier New', monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .monitoring-toggle {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      cursor: pointer;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-full);
+      transition: all var(--transition-fast);
+      user-select: none;
+    }
+
+    .monitoring-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    .monitoring-toggle.active {
+      background: var(--success);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+    }
+
+    .monitoring-icon {
+      font-size: 1.2rem;
+      transition: transform var(--transition-fast);
+    }
+
+    .monitoring-toggle.active .monitoring-icon {
+      animation: headphone-bounce 1s ease-in-out infinite;
+    }
+
+    @keyframes headphone-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    /* ============================================
+       BUTTONS
+       ============================================ */
+    .btn-group {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 140px;
+      min-height: 60px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: 'Heebo', sans-serif;
+      border: none;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width var(--transition-normal), height var(--transition-normal);
+    }
+
+    .btn:active::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 25px rgba(139, 92, 246, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      box-shadow: 0 6px 25px rgba(239, 68, 68, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      box-shadow: 0 6px 25px rgba(107, 114, 128, 0.5);
+      transform: translateY(-2px);
+    }
+
+    /* ============================================
+       WAVEFORM VISUALIZATION
+       ============================================ */
+    .waveform-container {
+      position: relative;
+      width: 100%;
+      height: 150px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: var(--spacing-lg);
+      border: 2px solid var(--glass-border);
+    }
+
+    #waveform {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .waveform-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* ============================================
+       LEVEL METERS
+       ============================================ */
+    .meters-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .meter-box {
+      background: rgba(0, 0, 0, 0.2);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+    }
+
+    .meter-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .meter-value {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      color: var(--primary-light);
+    }
+
+    .meter-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--success) 0%, var(--warning) 70%, var(--danger) 100%);
+      border-radius: var(--radius-full);
+      transition: width 0.1s ease;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    /* ============================================
+       EFFECTS CONTROLS
+       ============================================ */
+    .effects-section {
+      position: relative;
+    }
+
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      background: var(--danger);
+      color: white;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      animation: pulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+    }
+
+    .effect-control {
+      margin-bottom: var(--spacing-lg);
+      position: relative;
+    }
+
+    .effect-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .effect-label {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .effect-value {
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      min-width: 60px;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 4px 12px;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+
+    .effect-control.active .effect-value {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+      transform: scale(1.05);
+    }
+
+    /* Custom Slider Styles */
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-full);
+      outline: none;
+      position: relative;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .slider:hover {
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+      transition: all var(--transition-fast);
+      border: 3px solid white;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.7);
+    }
+
+    .slider::-webkit-slider-thumb:active {
+      transform: scale(1.05);
+    }
+
+    .slider::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+      transition: all var(--transition-fast);
+      border: 3px solid white;
+    }
+
+    .slider::-moz-range-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.7);
+    }
+
+    /* Slider Progress Fill */
+    .slider-wrapper {
+      position: relative;
+    }
+
+    .slider-progress {
+      position: absolute;
+      height: 8px;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: var(--radius-full);
+      pointer-events: none;
+      top: 0;
+      right: 0;
+      transition: width var(--transition-fast);
+    }
+
+    /* Preset Buttons */
+    .presets-container {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-full);
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: 'Heebo', sans-serif;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+
+    .preset-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ============================================
+       FILE UPLOAD
+       ============================================ */
+    .file-upload {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      right: -9999px;
+    }
+
+    .file-input-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-lg);
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px dashed var(--glass-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      font-weight: 500;
+    }
+
+    .file-input-label:hover {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .file-name {
+      margin-top: var(--spacing-sm);
+      padding: var(--spacing-sm);
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* ============================================
+       VOICE CLONE SECTION
+       ============================================ */
+    .voice-select-wrapper {
+      position: relative;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .voice-select {
+      width: 100%;
+      padding: var(--spacing-md);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      color: white;
+      font-size: 1rem;
+      font-family: 'Heebo', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: left 12px center;
+      background-size: 20px;
+      padding-left: 40px;
+    }
+
+    .voice-select:hover {
+      background-color: rgba(0, 0, 0, 0.4);
+      border-color: var(--primary);
+    }
+
+    .voice-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    }
+
+    .voice-select option {
+      background: #1f2937;
+      color: white;
+      padding: var(--spacing-sm);
+    }
+
+    /* ============================================
+       ALERT / NOTIFICATION
+       ============================================ */
+    .alert {
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--spacing-md);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      font-size: 0.9rem;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid var(--warning);
+      color: #fbbf24;
+    }
+
+    .alert-info {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
+    }
+
+    /* ============================================
+       PLAYER SECTION
+       ============================================ */
+    .player-section {
+      margin-top: var(--spacing-xl);
+    }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .progress-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: var(--radius-full);
+      transition: width 0.1s linear;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      margin-left: -7px;
+    }
+
+    .time-display {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: var(--spacing-xs);
+    }
+
+    /* ============================================
+       LATENCY INDICATOR
+       ============================================ */
+    .latency-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: 4px 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+    }
+
+    .latency-good {
+      color: var(--success);
+    }
+
+    .latency-medium {
+      color: var(--warning);
+    }
+
+    .latency-bad {
+      color: var(--danger);
+    }
+
+    /* ============================================
+       RESPONSIVE DESIGN
+       ============================================ */
+    @media (max-width: 768px) {
+      .container {
+        padding: var(--spacing-md);
+      }
+
+      .glass-panel {
+        padding: var(--spacing-md);
+      }
+
+      .btn-group {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .meters-container {
+        grid-template-columns: 1fr;
+      }
+
+      .recording-status {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .player-controls {
+        flex-direction: column;
+      }
+    }
+
+    /* ============================================
+       UTILITY CLASSES
+       ============================================ */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-1 { margin-top: var(--spacing-sm); }
+    .mt-2 { margin-top: var(--spacing-md); }
+    .mt-3 { margin-top: var(--spacing-lg); }
+
+    .mb-1 { margin-bottom: var(--spacing-sm); }
+    .mb-2 { margin-bottom: var(--spacing-md); }
+    .mb-3 { margin-bottom: var(--spacing-lg); }
+
+    /* ============================================
+       ANIMATIONS
+       ============================================ */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease;
+    }
+
+    .slide-up {
+      animation: slideUp 0.5s ease;
+    }
+
+    /* ============================================
+       LOADING SPINNER
+       ============================================ */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ============================================
+       INSTALL PROMPT
+       ============================================ */
+    .install-prompt {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      right: var(--spacing-lg);
+      left: var(--spacing-lg);
+      max-width: 400px;
+      margin: 0 auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      animation: slideUp 0.5s ease;
+    }
+
+    .install-prompt-content {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .install-prompt-icon {
+      font-size: 2.5rem;
+    }
+
+    .install-prompt-text h3 {
+      font-size: 1.1rem;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .install-prompt-text p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .install-prompt-buttons {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .install-prompt-buttons button {
+      flex: 1;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: 'Heebo', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .install-btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .install-btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <h1>🎤 מחולל קול זמרים AI</h1>
+    <p>הקלט, הוסף אפקטים בזמן אמת, ושבט קולות - הכל בחינם!</p>
+  </header>
+
+  <div class="container">
+
+    <!-- Recording Section -->
+    <section class="glass-panel recording-section slide-up">
+      <h2 class="panel-title">
+        🎙️ הקלטה
+        <span id="liveIndicator" class="live-indicator hidden">
+          <span class="recording-indicator"></span>
+          LIVE
+        </span>
+      </h2>
+
+      <!-- Alert for headphones -->
+      <div id="headphonesAlert" class="alert alert-warning hidden">
+        ⚠️ <strong>המלצה:</strong> חבר אוזניות למניעת הדהוד (Feedback) בזמן הניטור החי!
+      </div>
+
+      <!-- Recording Status -->
+      <div id="recordingStatus" class="recording-status hidden">
+        <div class="status-item">
+          <span class="recording-indicator"></span>
+          <span id="recordingText">מקליט...</span>
+        </div>
+        <div class="status-item">
+          ⏱️ <span class="recording-timer" id="recordingTimer">00:00</span>
+        </div>
+        <div class="monitoring-toggle" id="monitoringToggle">
+          <span class="monitoring-icon">🎧</span>
+          <span id="monitoringText">ניטור חי</span>
+        </div>
+        <div class="latency-indicator">
+          ⚡ <span id="latencyValue" class="latency-good">0ms</span>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="btn-group">
+        <button class="btn btn-primary" id="recordBtn">
+          🎙️ התחל הקלטה
+        </button>
+        <button class="btn btn-danger" id="stopBtn" disabled>
+          ⏹️ עצור הקלטה
+        </button>
+        <button class="btn btn-secondary" id="loadFileBtn">
+          📁 טען קובץ אודיו
+        </button>
+      </div>
+
+      <!-- Hidden File Input -->
+      <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+
+      <!-- Waveform Visualization -->
+      <div class="waveform-container">
+        <canvas id="waveform"></canvas>
+        <div class="waveform-overlay" id="waveformOverlay">
+          📊 גלי אודיו יופיעו כאן
+        </div>
+      </div>
+
+      <!-- Level Meters -->
+      <div class="meters-container">
+        <div class="meter-box">
+          <div class="meter-label">
+            <span>🎤 קלט (Input)</span>
+            <span class="meter-value" id="inputLevel">0 dB</span>
+          </div>
+          <div class="meter-bar">
+            <div class="meter-fill" id="inputMeter" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="meter-box">
+          <div class="meter-label">
+            <span>🔊 פלט (Output)</span>
+            <span class="meter-value" id="outputLevel">0 dB</span>
+          </div>
+          <div class="meter-bar">
+            <div class="meter-fill" id="outputMeter" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Effects Section -->
+    <section class="glass-panel effects-section slide-up">
+      <h2 class="panel-title">
+        🎚️ אפקטים בזמן אמת
+      </h2>
+
+      <div class="alert alert-info">
+        💡 <strong>טיפ:</strong> שנה את האפקטים בזמן ההקלטה - תשמע את השינויים מיד!
+      </div>
+
+      <!-- Presets -->
+      <div class="presets-container">
+        <button class="preset-btn" data-preset="reset">🔄 אפס הכל</button>
+        <button class="preset-btn" data-preset="hall">🏛️ אולם קונצרטים</button>
+        <button class="preset-btn" data-preset="studio">🎙️ אולפן</button>
+        <button class="preset-btn" data-preset="echo">📢 אקו כבד</button>
+        <button class="preset-btn" data-preset="bass">🎛️ בס מוגבר</button>
+      </div>
+
+      <!-- Reverb Control -->
+      <div class="effect-control" id="reverbControl">
+        <div class="effect-header">
+          <label class="effect-label" for="reverbSlider">
+            🌊 Reverb (הד חלל)
+          </label>
+          <span class="effect-value" id="reverbValue">0%</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="reverbSlider" min="0" max="100" value="0">
+          <div class="slider-progress" id="reverbProgress" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Echo Control -->
+      <div class="effect-control" id="echoControl">
+        <div class="effect-header">
+          <label class="effect-label" for="echoSlider">
+            📢 Echo (הד חוזר)
+          </label>
+          <span class="effect-value" id="echoValue">0%</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="echoSlider" min="0" max="100" value="0">
+          <div class="slider-progress" id="echoProgress" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Pitch Control -->
+      <div class="effect-control" id="pitchControl">
+        <div class="effect-header">
+          <label class="effect-label" for="pitchSlider">
+            🎵 Pitch Shift (גובה צליל)
+          </label>
+          <span class="effect-value" id="pitchValue">0</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="pitchSlider" min="-12" max="12" value="0" step="1">
+          <div class="slider-progress" id="pitchProgress" style="width: 50%;"></div>
+        </div>
+      </div>
+
+      <!-- Bass EQ Control -->
+      <div class="effect-control" id="bassControl">
+        <div class="effect-header">
+          <label class="effect-label" for="bassSlider">
+            🎛️ Bass EQ (בס)
+          </label>
+          <span class="effect-value" id="bassValue">0 dB</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="bassSlider" min="-12" max="12" value="0" step="1">
+          <div class="slider-progress" id="bassProgress" style="width: 50%;"></div>
+        </div>
+      </div>
+
+      <!-- Treble EQ Control -->
+      <div class="effect-control" id="trebleControl">
+        <div class="effect-header">
+          <label class="effect-label" for="trebleSlider">
+            🎚️ Treble EQ (טרבל)
+          </label>
+          <span class="effect-value" id="trebleValue">0 dB</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="trebleSlider" min="-12" max="12" value="0" step="1">
+          <div class="slider-progress" id="trebleProgress" style="width: 50%;"></div>
+        </div>
+      </div>
+
+      <!-- Dry/Wet Mix Control -->
+      <div class="effect-control" id="mixControl">
+        <div class="effect-header">
+          <label class="effect-label" for="mixSlider">
+            🔀 Dry/Wet Mix (ערבוב)
+          </label>
+          <span class="effect-value" id="mixValue">100%</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="mixSlider" min="0" max="100" value="100">
+          <div class="slider-progress" id="mixProgress" style="width: 100%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Voice Clone Section -->
+    <section class="glass-panel slide-up">
+      <h2 class="panel-title">🎭 שיבוט קול זמרים</h2>
+      
+      <div class="voice-select-wrapper">
+        <select class="voice-select" id="voiceSelect">
+          <option value="">בחר זמר מהרשימה...</option>
+          <option value="singer1">🎤 זמר 1 - קול עמוק</option>
+          <option value="singer2">🎵 זמרת 1 - סופרן</option>
+          <option value="singer3">🎸 זמר 2 - רוק</option>
+          <option value="singer4">🎹 זמרת 2 - פופ</option>
+          <option value="custom">✨ העלה קול מותאם אישית</option>
+        </select>
+      </div>
+
+      <div class="file-upload hidden" id="customVoiceUpload">
+        <div class="file-input-wrapper">
+          <input type="file" id="customVoiceFile" accept="audio/*">
+          <label for="customVoiceFile" class="file-input-label">
+            📤 העלה דוגמת קול (10-30 שניות)
+          </label>
+        </div>
+        <div id="customVoiceFileName" class="file-name hidden"></div>
+      </div>
+
+      <button class="btn btn-primary mt-2" id="cloneBtn" disabled>
+        🎭 שבט קול
+      </button>
+
+      <div class="alert alert-info mt-2">
+        ℹ️ שיבוט קול דורש API של Fish Audio (חינמי). ניתן להשתמש בדמו בינתיים.
+      </div>
+    </section>
+
+    <!-- Playback/Karaoke Section -->
+    <section class="glass-panel slide-up">
+      <h2 class="panel-title">🎹 פלייבק / קריוקי</h2>
+
+      <div class="file-upload">
+        <div class="file-input-wrapper">
+          <input type="file" id="backingTrackFile" accept="audio/*">
+          <label for="backingTrackFile" class="file-input-label">
+            🎵 טען מוזיקת רקע / קריוקי
+          </label>
+        </div>
+        <div id="backingTrackFileName" class="file-name hidden"></div>
+      </div>
+
+      <div class="effect-control">
+        <div class="effect-header">
+          <label class="effect-label" for="backingVolumeSlider">
+            🔊 עוצמת פלייבק
+          </label>
+          <span class="effect-value" id="backingVolumeValue">50%</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="backingVolumeSlider" min="0" max="100" value="50">
+          <div class="slider-progress" id="backingVolumeProgress" style="width: 50%;"></div>
+        </div>
+      </div>
+
+      <div class="effect-control">
+        <div class="effect-header">
+          <label class="effect-label" for="vocalVolumeSlider">
+            🎤 עוצמת ווקאל
+          </label>
+          <span class="effect-value" id="vocalVolumeValue">80%</span>
+        </div>
+        <div class="slider-wrapper">
+          <input type="range" class="slider" id="vocalVolumeSlider" min="0" max="100" value="80">
+          <div class="slider-progress" id="vocalVolumeProgress" style="width: 80%;"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-success" id="mixBtn" disabled>
+        🔀 ערבב ווקאל + פלייבק
+      </button>
+    </section>
+
+    <!-- Player Section -->
+    <section class="glass-panel player-section slide-up">
+      <h2 class="panel-title">▶️ נגן</h2>
+
+      <div class="player-controls">
+        <button class="btn btn-primary" id="playBtn" disabled>
+          ▶️ נגן
+        </button>
+        <button class="btn btn-secondary" id="pauseBtn" disabled>
+          ⏸️ השהה
+        </button>
+        <button class="btn btn-success" id="exportBtn" disabled>
+          💾 ייצא MP3
+        </button>
+      </div>
+
+      <div class="progress-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="time-display">
+        <span id="currentTime">00:00</span>
+        <span id="totalTime">00:00</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Install Prompt (PWA) -->
+  <div id="installPrompt" class="install-prompt hidden">
+    <div class="install-prompt-content">
+      <div class="install-prompt-icon">📱</div>
+      <div class="install-prompt-text">
+        <h3>התקן כאפליקציה</h3>
+        <p>השתמש באפליקציה אופליין עם התקנה למסך הבית</p>
+      </div>
+    </div>
+    <div class="install-prompt-buttons">
+      <button class="install-btn-primary" id="installBtn">התקן</button>
+      <button class="install-btn-secondary" id="dismissInstallBtn">לא עכשיו</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // GLOBAL STATE
+    // ============================================
+    let audioContext = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordedBlob = null;
+    let isRecording = false;
+    let isMonitoring = false;
+    let recordingStartTime = 0;
+    let recordingInterval = null;
+    let currentAudioBuffer = null;
+    let backingTrackBuffer = null;
+    let audioSource = null;
+    let backingSource = null;
+    let isPlaying = false;
+    let startTime = 0;
+    let pauseTime = 0;
+
+    // Audio Nodes
+    let inputSource = null;
+    let reverbNode = null;
+    let delayNode = null;
+    let feedbackGain = null;
+    let bassEQ = null;
+    let trebleEQ = null;
+    let dryGain = null;
+    let wetGain = null;
+    let outputGain = null;
+    let analyserNode = null;
+    let inputAnalyser = null;
+    let outputAnalyser = null;
+    let mediaStreamDestination = null;
+
+    // Animation Frames
+    let waveformAnimationId = null;
+    let metersAnimationId = null;
+
+    // PWA Install Prompt
+    let deferredPrompt = null;
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeApp();
+      setupEventListeners();
+      checkBrowserSupport();
+    });
+
+    function initializeApp() {
+      // Initialize AudioContext on user interaction
+      document.body.addEventListener('click', () => {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          console.log('AudioContext initialized:', audioContext.state);
+          updateLatencyIndicator();
+        }
+      }, { once: true });
+
+      // Setup Canvas
+      setupWaveform();
+    }
+
+    function setupEventListeners() {
+      // Recording Controls
+      document.getElementById('recordBtn').addEventListener('click', startRecording);
+      document.getElementById('stopBtn').addEventListener('click', stopRecording);
+      document.getElementById('loadFileBtn').addEventListener('click', () => {
+        document.getElementById('audioFileInput').click();
+      });
+      document.getElementById('audioFileInput').addEventListener('change', handleFileUpload);
+
+      // Monitoring Toggle
+      document.getElementById('monitoringToggle').addEventListener('click', toggleMonitoring);
+
+      // Effects Controls
+      setupEffectListeners();
+
+      // Preset Buttons
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const preset = e.target.dataset.preset;
+          applyPreset(preset);
+        });
+      });
+
+      // Voice Clone
+      document.getElementById('voiceSelect').addEventListener('change', handleVoiceSelect);
+      document.getElementById('customVoiceFile').addEventListener('change', handleCustomVoiceUpload);
+      document.getElementById('cloneBtn').addEventListener('click', cloneVoice);
+
+      // Backing Track
+      document.getElementById('backingTrackFile').addEventListener('change', handleBackingTrackUpload);
+      document.getElementById('backingVolumeSlider').addEventListener('input', updateBackingVolume);
+      document.getElementById('vocalVolumeSlider').addEventListener('input', updateVocalVolume);
+      document.getElementById('mixBtn').addEventListener('click', mixTracks);
+
+      // Player Controls
+      document.getElementById('playBtn').addEventListener('click', playAudio);
+      document.getElementById('pauseBtn').addEventListener('click', pauseAudio);
+      document.getElementById('exportBtn').addEventListener('click', exportAudio);
+      document.getElementById('progressContainer').addEventListener('click', seekAudio);
+
+      // PWA Install
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installPrompt').classList.remove('hidden');
+      });
+
+      document.getElementById('installBtn').addEventListener('click', installApp);
+      document.getElementById('dismissInstallBtn').addEventListener('click', () => {
+        document.getElementById('installPrompt').classList.add('hidden');
+      });
+    }
+
+    function setupEffectListeners() {
+      // Reverb
+      const reverbSlider = document.getElementById('reverbSlider');
+      reverbSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateEffectValue('reverb', value);
+        updateEffectRealtime('reverb', value);
+        updateSliderProgress('reverb', value);
+      });
+
+      // Echo
+      const echoSlider = document.getElementById('echoSlider');
+      echoSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateEffectValue('echo', value);
+        updateEffectRealtime('echo', value);
+        updateSliderProgress('echo', value);
+      });
+
+      // Pitch
+      const pitchSlider = document.getElementById('pitchSlider');
+      pitchSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateEffectValue('pitch', value);
+        updateEffectRealtime('pitch', value);
+        updateSliderProgress('pitch', (parseFloat(value) + 12) / 24 * 100);
+      });
+
+      // Bass
+      const bassSlider = document.getElementById('bassSlider');
+      bassSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateEffectValue('bass', value);
+        updateEffectRealtime('bass', value);
+        updateSliderProgress('bass', (parseFloat(value) + 12) / 24 * 100);
+      });
+
+      // Treble
+      const trebleSlider = document.getElementById('trebleSlider');
+      trebleSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateEffectValue('treble', value);
+        updateEffectRealtime('treble', value);
+        updateSliderProgress('treble', (parseFloat(value) + 12) / 24 * 100);
+      });
+
+      // Mix
+      const mixSlider = document.getElementById('mixSlider');
+      mixSlider.addEventListener('input', (e) => {
+        const value = e.target.value;
+        updateEffectValue('mix', value);
+        updateEffectRealtime('mix', value);
+        updateSliderProgress('mix', value);
+      });
+    }
+
+    // ============================================
+    // RECORDING FUNCTIONS
+    // ============================================
+    async function startRecording() {
+      try {
+        // Initialize AudioContext if needed
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        // Request Microphone Access
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000
+          }
+        });
+
+        // Setup Audio Processing Chain
+        setupAudioChain(stream);
+
+        // Setup MediaRecorder
+        const recordStream = mediaStreamDestination.stream;
+        mediaRecorder = new MediaRecorder(recordStream, {
+          mimeType: 'audio/webm;codecs=opus'
+        });
+
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+          await loadRecordedAudio(recordedBlob);
+          cleanupRecording();
+        };
+
+        // Start Recording
+        mediaRecorder.start(100);
+        isRecording = true;
+        recordingStartTime = Date.now();
+
+        // Update UI
+        updateRecordingUI(true);
+
+        // Start Timer
+        startRecordingTimer();
+
+        // Start Visualizations
+        startWaveformVisualization();
+        startMetersVisualization();
+
+        // Show headphones alert
+        document.getElementById('headphonesAlert').classList.remove('hidden');
+
+        console.log('Recording started');
+
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        if (error.name === 'NotAllowedError') {
+          alert('❌ נדרשת הרשאת מיקרופון. אנא אפשר גישה בהגדרות הדפדפן.');
+        } else if (error.name === 'NotFoundError') {
+          alert('🎤 לא נמצא מיקרופון. אנא חבר מיקרופון ונסה שוב.');
+        } else {
+          alert('❌ שגיאה בהתחלת הקלטה: ' + error.message);
+        }
+      }
+    }
+
+    function setupAudioChain(stream) {
+      // Create Input Source
+      inputSource = audioContext.createMediaStreamSource(stream);
+
+      // Create Analysers
+      inputAnalyser = audioContext.createAnalyser();
+      inputAnalyser.fftSize = 2048;
+      outputAnalyser = audioContext.createAnalyser();
+      outputAnalyser.fftSize = 2048;
+
+      // Create Effects Nodes
+      
+      // Reverb (ConvolverNode)
+      reverbNode = audioContext.createConvolver();
+      createReverbImpulse(); // Generate impulse response
+      
+      // Delay (Echo)
+      delayNode = audioContext.createDelay(5.0);
+      delayNode.delayTime.value = 0;
+      feedbackGain = audioContext.createGain();
+      feedbackGain.gain.value = 0;
+
+      // EQ Filters
+      bassEQ = audioContext.createBiquadFilter();
+      bassEQ.type = 'lowshelf';
+      bassEQ.frequency.value = 200;
+      bassEQ.gain.value = 0;
+
+      trebleEQ = audioContext.createBiquadFilter();
+      trebleEQ.type = 'highshelf';
+      trebleEQ.frequency.value = 3000;
+      trebleEQ.gain.value = 0;
+
+      // Dry/Wet Gains
+      dryGain = audioContext.createGain();
+      dryGain.gain.value = 1;
+      wetGain = audioContext.createGain();
+      wetGain.gain.value = 1;
+
+      // Output Gain
+      outputGain = audioContext.createGain();
+      outputGain.gain.value = 0.8;
+
+      // Create MediaStreamDestination for recording
+      mediaStreamDestination = audioContext.createMediaStreamDestination();
+
+      // Connect Chain
+      // Input → Input Analyser
+      inputSource.connect(inputAnalyser);
+
+      // Dry Path (original signal)
+      inputAnalyser.connect(dryGain);
+
+      // Wet Path (with effects)
+      inputAnalyser.connect(bassEQ);
+      bassEQ.connect(trebleEQ);
+      trebleEQ.connect(reverbNode);
+      reverbNode.connect(delayNode);
+      delayNode.connect(feedbackGain);
+      feedbackGain.connect(delayNode); // Feedback loop
+      delayNode.connect(wetGain);
+
+      // Mix Dry + Wet
+      dryGain.connect(outputGain);
+      wetGain.connect(outputGain);
+
+      // Output → Analyser → Destination
+      outputGain.connect(outputAnalyser);
+      outputAnalyser.connect(mediaStreamDestination);
+
+      // Monitoring is OFF by default
+      // User can toggle it
+    }
+
+    function createReverbImpulse() {
+      // Create a simple reverb impulse response
+      const sampleRate = audioContext.sampleRate;
+      const length = sampleRate * 2; // 2 seconds
+      const impulse = audioContext.createBuffer(2, length, sampleRate);
+      
+      for (let channel = 0; channel < 2; channel++) {
+        const channelData = impulse.getChannelData(channel);
+        for (let i = 0; i < length; i++) {
+          channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+        }
+      }
+      
+      reverbNode.buffer = impulse;
+    }
+
+    function toggleMonitoring() {
+      if (!isRecording) return;
+
+      isMonitoring = !isMonitoring;
+      const toggle = document.getElementById('monitoringToggle');
+      const text = document.getElementById('monitoringText');
+
+      if (isMonitoring) {
+        // Connect to speakers
+        outputGain.connect(audioContext.destination);
+        toggle.classList.add('active');
+        text.textContent = 'ניטור ON';
+        console.log('Live monitoring enabled');
+      } else {
+        // Disconnect from speakers
+        outputGain.disconnect(audioContext.destination);
+        toggle.classList.remove('active');
+        text.textContent = 'ניטור OFF';
+        console.log('Live monitoring disabled');
+      }
+    }
+
+    function updateEffectRealtime(effect, value) {
+      if (!isRecording || !audioContext) return;
+
+      const floatValue = parseFloat(value);
+
+      switch(effect) {
+        case 'reverb':
+          // Control reverb wet/dry mix via gain
+          // Since we already have reverb in the chain, we adjust wetGain
+          // For simplicity, we'll adjust wetGain based on reverb amount
+          const reverbAmount = floatValue / 100;
+          // This is a simplified approach
+          // In production, you'd route through separate wet/dry paths
+          break;
+
+        case 'echo':
+          const echoAmount = floatValue / 100;
+          delayNode.delayTime.value = echoAmount * 0.5; // 0 to 500ms
+          feedbackGain.gain.value = echoAmount * 0.6; // 0 to 60% feedback
+          break;
+
+        case 'pitch':
+          // Pitch shifting in Web Audio API requires advanced techniques
+          // (e.g., granular synthesis, Web Audio API doesn't have native pitch shift)
+          // For this demo, we'll skip real-time pitch shifting
+          // It would require AudioWorklet or a library like Tone.js
+          console.log('Pitch shift:', floatValue, 'semitones (not implemented in real-time)');
+          break;
+
+        case 'bass':
+          bassEQ.gain.value = floatValue;
+          break;
+
+        case 'treble':
+          trebleEQ.gain.value = floatValue;
+          break;
+
+        case 'mix':
+          const mixAmount = floatValue / 100;
+          dryGain.gain.value = 1 - mixAmount;
+          wetGain.gain.value = mixAmount;
+          break;
+      }
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+
+      try {
+        // Stop MediaRecorder
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+
+        isRecording = false;
+
+        // Stop Timer
+        clearInterval(recordingInterval);
+
+        // Stop Visualizations
+        cancelAnimationFrame(waveformAnimationId);
+        cancelAnimationFrame(metersAnimationId);
+
+        // Update UI
+        updateRecordingUI(false);
+
+        // Hide headphones alert
+        document.getElementById('headphonesAlert').classList.add('hidden');
+
+        console.log('Recording stopped');
+
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+        alert('❌ שגיאה בעצירת ההקלטה: ' + error.message);
+      }
+    }
+
+    function cleanupRecording() {
+      // Disconnect and cleanup nodes
+      if (inputSource) {
+        inputSource.disconnect();
+        inputSource = null;
+      }
+
+      if (outputGain && isMonitoring) {
+        outputGain.disconnect(audioContext.destination);
+        isMonitoring = false;
+        document.getElementById('monitoringToggle').classList.remove('active');
+        document.getElementById('monitoringText').textContent = 'ניטור OFF';
+      }
+
+      // Stop all tracks
+      if (mediaRecorder && mediaRecorder.stream) {
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    async function loadRecordedAudio(blob) {
+      try {
+        const arrayBuffer = await blob.arrayBuffer();
+        currentAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Enable player controls
+        document.getElementById('playBtn').disabled = false;
+        document.getElementById('exportBtn').disabled = false;
+        
+        // Enable mix button if backing track is loaded
+        if (backingTrackBuffer) {
+          document.getElementById('mixBtn').disabled = false;
+        }
+
+        console.log('Audio loaded successfully', currentAudioBuffer.duration, 'seconds');
+
+        // Update total time
+        updateTimeDisplay(currentAudioBuffer.duration);
+
+      } catch (error) {
+        console.error('Error loading recorded audio:', error);
+        alert('❌ שגיאה בטעינת האודיו: ' + error.message);
+      }
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('audio/')) {
+        alert('❌ אנא בחר קובץ אודיו תקין');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          }
+
+          const arrayBuffer = event.target.result;
+          currentAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          // Enable controls
+          document.getElementById('playBtn').disabled = false;
+          document.getElementById('exportBtn').disabled = false;
+
+          if (backingTrackBuffer) {
+            document.getElementById('mixBtn').disabled = false;
+          }
+
+          console.log('File loaded:', file.name, currentAudioBuffer.duration, 'seconds');
+
+          // Update time display
+          updateTimeDisplay(currentAudioBuffer.duration);
+
+        } catch (error) {
+          console.error('Error loading file:', error);
+          alert('❌ שגיאה בטעינת הקובץ: ' + error.message);
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ============================================
+    // EFFECTS FUNCTIONS
+    // ============================================
+    function updateEffectValue(effect, value) {
+      const floatValue = parseFloat(value);
+      let displayValue = '';
+
+      switch(effect) {
+        case 'reverb':
+          displayValue = Math.round(floatValue) + '%';
+          document.getElementById('reverbValue').textContent = displayValue;
+          document.getElementById('reverbControl').classList.add('active');
+          setTimeout(() => {
+            document.getElementById('reverbControl').classList.remove('active');
+          }, 200);
+          break;
+
+        case 'echo':
+          displayValue = Math.round(floatValue) + '%';
+          document.getElementById('echoValue').textContent = displayValue;
+          document.getElementById('echoControl').classList.add('active');
+          setTimeout(() => {
+            document.getElementById('echoControl').classList.remove('active');
+          }, 200);
+          break;
+
+        case 'pitch':
+          displayValue = (floatValue > 0 ? '+' : '') + floatValue;
+          document.getElementById('pitchValue').textContent = displayValue;
+          document.getElementById('pitchControl').classList.add('active');
+          setTimeout(() => {
+            document.getElementById('pitchControl').classList.remove('active');
+          }, 200);
+          break;
+
+        case 'bass':
+          displayValue = (floatValue > 0 ? '+' : '') + floatValue + ' dB';
+          document.getElementById('bassValue').textContent = displayValue;
+          document.getElementById('bassControl').classList.add('active');
+          setTimeout(() => {
+            document.getElementById('bassControl').classList.remove('active');
+          }, 200);
+          break;
+
+        case 'treble':
+          displayValue = (floatValue > 0 ? '+' : '') + floatValue + ' dB';
+          document.getElementById('trebleValue').textContent = displayValue;
+          document.getElementById('trebleControl').classList.add('active');
+          setTimeout(() => {
+            document.getElementById('trebleControl').classList.remove('active');
+          }, 200);
+          break;
+
+        case 'mix':
+          displayValue = Math.round(floatValue) + '%';
+          document.getElementById('mixValue').textContent = displayValue;
+          document.getElementById('mixControl').classList.add('active');
+          setTimeout(() => {
+            document.getElementById('mixControl').classList.remove('active');
+          }, 200);
+          break;
+      }
+    }
+
+    function updateSliderProgress(effect, percentage) {
+      const progress = document.getElementById(effect + 'Progress');
+      if (progress) {
+        progress.style.width = percentage + '%';
+      }
+    }
+
+    function applyPreset(preset) {
+      switch(preset) {
+        case 'reset':
+          setEffectValues(0, 0, 0, 0, 0, 100);
+          break;
+
+        case 'hall':
+          setEffectValues(70, 20, 0, 3, 2, 80);
+          break;
+
+        case 'studio':
+          setEffectValues(30, 10, 0, 5, 5, 90);
+          break;
+
+        case 'echo':
+          setEffectValues(40, 80, 0, 0, 0, 70);
+          break;
+
+        case 'bass':
+          setEffectValues(20, 10, 0, 10, 0, 100);
+          break;
+      }
+
+      console.log('Preset applied:', preset);
+    }
+
+    function setEffectValues(reverb, echo, pitch, bass, treble, mix) {
+      // Set slider values
+      document.getElementById('reverbSlider').value = reverb;
+      document.getElementById('echoSlider').value = echo;
+      document.getElementById('pitchSlider').value = pitch;
+      document.getElementById('bassSlider').value = bass;
+      document.getElementById('trebleSlider').value = treble;
+      document.getElementById('mixSlider').value = mix;
+
+      // Update displays
+      updateEffectValue('reverb', reverb);
+      updateEffectValue('echo', echo);
+      updateEffectValue('pitch', pitch);
+      updateEffectValue('bass', bass);
+      updateEffectValue('treble', treble);
+      updateEffectValue('mix', mix);
+
+      // Update progress bars
+      updateSliderProgress('reverb', reverb);
+      updateSliderProgress('echo', echo);
+      updateSliderProgress('pitch', (parseFloat(pitch) + 12) / 24 * 100);
+      updateSliderProgress('bass', (parseFloat(bass) + 12) / 24 * 100);
+      updateSliderProgress('treble', (parseFloat(treble) + 12) / 24 * 100);
+      updateSliderProgress('mix', mix);
+
+      // Apply in real-time if recording
+      if (isRecording) {
+        updateEffectRealtime('reverb', reverb);
+        updateEffectRealtime('echo', echo);
+        updateEffectRealtime('pitch', pitch);
+        updateEffectRealtime('bass', bass);
+        updateEffectRealtime('treble', treble);
+        updateEffectRealtime('mix', mix);
+      }
+    }
+
+    // ============================================
+    // VOICE CLONE FUNCTIONS
+    // ============================================
+    function handleVoiceSelect(e) {
+      const value = e.target.value;
+      const customUpload = document.getElementById('customVoiceUpload');
+      const cloneBtn = document.getElementById('cloneBtn');
+
+      if (value === 'custom') {
+        customUpload.classList.remove('hidden');
+        cloneBtn.disabled = true;
+      } else if (value === '') {
+        customUpload.classList.add('hidden');
+        cloneBtn.disabled = true;
+      } else {
+        customUpload.classList.add('hidden');
+        cloneBtn.disabled = false;
+      }
+    }
+
+    function handleCustomVoiceUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const fileName = document.getElementById('customVoiceFileName');
+      fileName.textContent = '📄 ' + file.name;
+      fileName.classList.remove('hidden');
+
+      document.getElementById('cloneBtn').disabled = false;
+    }
+
+    async function cloneVoice() {
+      const voiceSelect = document.getElementById('voiceSelect');
+      const selectedVoice = voiceSelect.value;
+
+      if (!selectedVoice) {
+        alert('⚠️ אנא בחר זמר או העלה קול מותאם אישית');
+        return;
+      }
+
+      if (!currentAudioBuffer) {
+        alert('⚠️ אנא הקלט או טען קובץ אודיו תחילה');
+        return;
+      }
+
+      // Demo implementation
+      alert('🎭 שיבוט קול בביצוע...\n\n' +
+            'בגרסה המלאה, הקול ישובט באמצעות Fish Audio API.\n' +
+            'זמר נבחר: ' + voiceSelect.options[voiceSelect.selectedIndex].text);
+
+      console.log('Voice cloning:', selectedVoice);
+
+      // In production, you would:
+      // 1. Send audio to Fish Audio API
+      // 2. Get back the cloned audio
+      // 3. Load it as currentAudioBuffer
+    }
+
+    // ============================================
+    // BACKING TRACK / MIX FUNCTIONS
+    // ============================================
+    function handleBackingTrackUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('audio/')) {
+        alert('❌ אנא בחר קובץ אודיו תקין');
+        return;
+      }
+
+      const fileName = document.getElementById('backingTrackFileName');
+      fileName.textContent = '🎵 ' + file.name;
+      fileName.classList.remove('hidden');
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          }
+
+          const arrayBuffer = event.target.result;
+          backingTrackBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          // Enable mix button if vocal is loaded
+          if (currentAudioBuffer) {
+            document.getElementById('mixBtn').disabled = false;
+          }
+
+          console.log('Backing track loaded:', file.name, backingTrackBuffer.duration, 'seconds');
+
+        } catch (error) {
+          console.error('Error loading backing track:', error);
+          alert('❌ שגיאה בטעינת מוזיקת הרקע: ' + error.message);
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function updateBackingVolume(e) {
+      const value = e.target.value;
+      document.getElementById('backingVolumeValue').textContent = value + '%';
+      updateSliderProgress('backingVolume', value);
+    }
+
+    function updateVocalVolume(e) {
+      const value = e.target.value;
+      document.getElementById('vocalVolumeValue').textContent = value + '%';
+      updateSliderProgress('vocalVolume', value);
+    }
+
+    async function mixTracks() {
+      if (!currentAudioBuffer || !backingTrackBuffer) {
+        alert('⚠️ אנא טען גם ווקאל וגם מוזיקת רקע');
+        return;
+      }
+
+      try {
+        // Get volume values
+        const backingVolume = parseFloat(document.getElementById('backingVolumeSlider').value) / 100;
+        const vocalVolume = parseFloat(document.getElementById('vocalVolumeSlider').value) / 100;
+
+        // Determine mix duration (use longer track)
+        const duration = Math.max(currentAudioBuffer.duration, backingTrackBuffer.duration);
+        const sampleRate = audioContext.sampleRate;
+        const length = Math.ceil(duration * sampleRate);
+
+        // Create offline context for mixing
+        const offlineContext = new OfflineAudioContext(2, length, sampleRate);
+
+        // Create sources
+        const vocalSource = offlineContext.createBufferSource();
+        vocalSource.buffer = currentAudioBuffer;
+        const vocalGain = offlineContext.createGain();
+        vocalGain.gain.value = vocalVolume;
+
+        const backingSource = offlineContext.createBufferSource();
+        backingSource.buffer = backingTrackBuffer;
+        const backingGain = offlineContext.createGain();
+        backingGain.gain.value = backingVolume;
+
+        // Connect
+        vocalSource.connect(vocalGain);
+        vocalGain.connect(offlineContext.destination);
+
+        backingSource.connect(backingGain);
+        backingGain.connect(offlineContext.destination);
+
+        // Start
+        vocalSource.start(0);
+        backingSource.start(0);
+
+        // Render
+        const mixedBuffer = await offlineContext.startRendering();
+
+        // Set as current audio
+        currentAudioBuffer = mixedBuffer;
+
+        // Enable play
+        document.getElementById('playBtn').disabled = false;
+        document.getElementById('exportBtn').disabled = false;
+
+        // Update time
+        updateTimeDisplay(mixedBuffer.duration);
+
+        alert('✅ ערבוב הושלם בהצלחה!');
+        console.log('Mixed audio:', mixedBuffer.duration, 'seconds');
+
+      } catch (error) {
+        console.error('Error mixing tracks:', error);
+        alert('❌ שגיאה בערבוב: ' + error.message);
+      }
+    }
+
+    // ============================================
+    // PLAYER FUNCTIONS
+    // ============================================
+    function playAudio() {
+      if (!currentAudioBuffer) return;
+
+      if (isPlaying) {
+        // Resume
+        audioContext.resume();
+        startProgressAnimation();
+        updatePlayerUI(true);
+        return;
+      }
+
+      // Create new source
+      audioSource = audioContext.createBufferSource();
+      audioSource.buffer = currentAudioBuffer;
+      audioSource.connect(audioContext.destination);
+
+      // Handle ended
+      audioSource.onended = () => {
+        stopAudio();
+      };
+
+      // Start from pause position or beginning
+      const offset = pauseTime || 0;
+      audioSource.start(0, offset);
+      startTime = audioContext.currentTime - offset;
+      isPlaying = true;
+
+      startProgressAnimation();
+      updatePlayerUI(true);
+
+      console.log('Playback started');
+    }
+
+    function pauseAudio() {
+      if (!isPlaying) return;
+
+      audioContext.suspend();
+      pauseTime = audioContext.currentTime - startTime;
+      isPlaying = false;
+      updatePlayerUI(false);
+
+      console.log('Playback paused at', pauseTime);
+    }
+
+    function stopAudio() {
+      if (audioSource) {
+        audioSource.stop();
+        audioSource.disconnect();
+        audioSource = null;
+      }
+
+      isPlaying = false;
+      pauseTime = 0;
+      startTime = 0;
+
+      updatePlayerUI(false);
+      updateProgress(0);
+      updateCurrentTime(0);
+
+      console.log('Playback stopped');
+    }
+
+    function seekAudio(e) {
+      if (!currentAudioBuffer) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = x / rect.width;
+      const newTime = percentage * currentAudioBuffer.duration;
+
+      if (isPlaying) {
+        stopAudio();
+        pauseTime = newTime;
+        playAudio();
+      } else {
+        pauseTime = newTime;
+        updateProgress(percentage * 100);
+        updateCurrentTime(newTime);
+      }
+    }
+
+    function startProgressAnimation() {
+      function update() {
+        if (!isPlaying) return;
+
+        const currentTime = audioContext.currentTime - startTime;
+        const percentage = (currentTime / currentAudioBuffer.duration) * 100;
+
+        updateProgress(percentage);
+        updateCurrentTime(currentTime);
+
+        requestAnimationFrame(update);
+      }
+
+      update();
+    }
+
+    function updateProgress(percentage) {
+      document.getElementById('progressBar').style.width = Math.min(percentage, 100) + '%';
+    }
+
+    function updateCurrentTime(time) {
+      document.getElementById('currentTime').textContent = formatTime(time);
+    }
+
+    function updateTimeDisplay(duration) {
+      document.getElementById('totalTime').textContent = formatTime(duration);
+    }
+
+    function updatePlayerUI(playing) {
+      const playBtn = document.getElementById('playBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+
+      if (playing) {
+        playBtn.textContent = '▶️ נגן';
+        playBtn.disabled = true;
+        pauseBtn.disabled = false;
+      } else {
+        playBtn.textContent = '▶️ נגן';
+        playBtn.disabled = false;
+        pauseBtn.disabled = true;
+      }
+    }
+
+    // ============================================
+    // EXPORT FUNCTIONS
+    // ============================================
+    async function exportAudio() {
+      if (!currentAudioBuffer) {
+        alert('⚠️ אין אודיו לייצוא');
+        return;
+      }
+
+      try {
+        // Convert to WAV
+        const wavBlob = bufferToWave(currentAudioBuffer);
+
+        // Download
+        const url = URL.createObjectURL(wavBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'voice-recording-' + Date.now() + '.wav';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        console.log('Audio exported');
+
+      } catch (error) {
+        console.error('Error exporting audio:', error);
+        alert('❌ שגיאה בייצוא: ' + error.message);
+      }
+    }
+
+    function bufferToWave(buffer) {
+      const length = buffer.length * buffer.numberOfChannels * 2 + 44;
+      const arrayBuffer = new ArrayBuffer(length);
+      const view = new DataView(arrayBuffer);
+      const channels = [];
+      let offset = 0;
+      let pos = 0;
+
+      // Write WAV header
+      setUint32(0x46464952); // "RIFF"
+      setUint32(length - 8); // file length - 8
+      setUint32(0x45564157); // "WAVE"
+
+      setUint32(0x20746d66); // "fmt " chunk
+      setUint32(16); // length = 16
+      setUint16(1); // PCM (uncompressed)
+      setUint16(buffer.numberOfChannels);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels); // avg. bytes/sec
+      setUint16(buffer.numberOfChannels * 2); // block-align
+      setUint16(16); // 16-bit
+
+      setUint32(0x61746164); // "data" - chunk
+      setUint32(length - pos - 4); // chunk length
+
+      // Write interleaved data
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+      }
+
+      while (pos < length) {
+        for (let i = 0; i < buffer.numberOfChannels; i++) {
+          let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF) | 0;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+
+      return new Blob([arrayBuffer], { type: 'audio/wav' });
+
+      function setUint16(data) {
+        view.setUint16(pos, data, true);
+        pos += 2;
+      }
+
+      function setUint32(data) {
+        view.setUint32(pos, data, true);
+        pos += 4;
+      }
+    }
+
+    // ============================================
+    // VISUALIZATION FUNCTIONS
+    // ============================================
+    function setupWaveform() {
+      const canvas = document.getElementById('waveform');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+
+    function startWaveformVisualization() {
+      const canvas = document.getElementById('waveform');
+      const ctx = canvas.getContext('2d');
+      const dataArray = new Uint8Array(outputAnalyser.frequencyBinCount);
+
+      document.getElementById('waveformOverlay').style.display = 'none';
+
+      function draw() {
+        waveformAnimationId = requestAnimationFrame(draw);
+
+        outputAnalyser.getByteTimeDomainData(dataArray);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.beginPath();
+
+        const sliceWidth = canvas.width / dataArray.length;
+        let x = 0;
+
+        for (let i = 0; i < dataArray.length; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * canvas.height) / 2;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+
+          x += sliceWidth;
+        }
+
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+      }
+
+      draw();
+    }
+
+    function startMetersVisualization() {
+      const inputMeter = document.getElementById('inputMeter');
+      const outputMeter = document.getElementById('outputMeter');
+      const inputLevel = document.getElementById('inputLevel');
+      const outputLevel = document.getElementById('outputLevel');
+
+      const inputDataArray = new Uint8Array(inputAnalyser.frequencyBinCount);
+      const outputDataArray = new Uint8Array(outputAnalyser.frequencyBinCount);
+
+      function update() {
+        metersAnimationId = requestAnimationFrame(update);
+
+        // Input meter
+        inputAnalyser.getByteFrequencyData(inputDataArray);
+        const inputAvg = inputDataArray.reduce((a, b) => a + b) / inputDataArray.length;
+        const inputPercentage = (inputAvg / 255) * 100;
+        const inputDb = 20 * Math.log10(inputAvg / 255);
+
+        inputMeter.style.width = inputPercentage + '%';
+        inputLevel.textContent = Math.round(inputDb) + ' dB';
+
+        // Output meter
+        outputAnalyser.getByteFrequencyData(outputDataArray);
+        const outputAvg = outputDataArray.reduce((a, b) => a + b) / outputDataArray.length;
+        const outputPercentage = (outputAvg / 255) * 100;
+        const outputDb = 20 * Math.log10(outputAvg / 255);
+
+        outputMeter.style.width = outputPercentage + '%';
+        outputLevel.textContent = Math.round(outputDb) + ' dB';
+      }
+
+      update();
+    }
+
+    // ============================================
+    // UI UPDATE FUNCTIONS
+    // ============================================
+    function updateRecordingUI(recording) {
+      const recordBtn = document.getElementById('recordBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const recordingStatus = document.getElementById('recordingStatus');
+      const liveIndicator = document.getElementById('liveIndicator');
+
+      if (recording) {
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+        recordingStatus.classList.remove('hidden');
+        liveIndicator.classList.remove('hidden');
+      } else {
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+        recordingStatus.classList.add('hidden');
+        liveIndicator.classList.add('hidden');
+      }
+    }
+
+    function startRecordingTimer() {
+      recordingInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const seconds = (elapsed % 60).toString().padStart(2, '0');
+        document.getElementById('recordingTimer').textContent = `${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    function updateLatencyIndicator() {
+      if (!audioContext) return;
+
+      const latency = audioContext.baseLatency * 1000; // Convert to ms
+      const latencyValue = document.getElementById('latencyValue');
+
+      latencyValue.textContent = Math.round(latency) + 'ms';
+
+      if (latency < 20) {
+        latencyValue.className = 'latency-good';
+      } else if (latency < 50) {
+        latencyValue.className = 'latency-medium';
+      } else {
+        latencyValue.className = 'latency-bad';
+      }
+    }
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+    }
+
+    function checkBrowserSupport() {
+      const features = {
+        audioContext: !!(window.AudioContext || window.webkitAudioContext),
+        mediaRecorder: !!window.MediaRecorder,
+        getUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+      };
+
+      const unsupported = Object.keys(features).filter(key => !features[key]);
+
+      if (unsupported.length > 0) {
+        alert(`🌐 הדפדפן שלך לא תומך ב: ${unsupported.join(', ')}\n\nאנא השתמש ב-Chrome, Firefox או Edge מעודכנים.`);
+        return false;
+      }
+
+      return true;
+    }
+
+    // ============================================
+    // PWA FUNCTIONS
+    // ============================================
+    async function installApp() {
+      if (!deferredPrompt) {
+        alert('❌ התקנה לא זמינה כרגע');
+        return;
+      }
+
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        console.log('PWA installed');
+      }
+
+      deferredPrompt = null;
+      document.getElementById('installPrompt').classList.add('hidden');
+    }
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('Service Worker registered'))
+          .catch(err => console.error('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+
+</body>
+</html>
