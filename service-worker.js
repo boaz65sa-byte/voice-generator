@@ -1,42 +1,41 @@
-// Service Worker for Voice Generator PWA
+// ============================================
+// SERVICE WORKER - PWA Offline Support
 // Version 1.0.0
+// ============================================
 
-const CACHE_NAME = 'voice-generator-v1';
+const CACHE_NAME = 'voice-generator-v1.0.0';
 const RUNTIME_CACHE = 'voice-generator-runtime';
 
-// Files to cache immediately on install
-const PRECACHE_URLS = [
+// Files to cache on install
+const STATIC_CACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
-  'https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap',
+  'https://fonts.gstatic.com/s/heebo/v21/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiSysd0mm.woff2'
 ];
 
-// ============================================
-// Install Event - Cache essential files
-// ============================================
+// Install Event - Cache static assets
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Precaching files');
-        return cache.addAll(PRECACHE_URLS);
+        console.log('[Service Worker] Caching static assets');
+        return cache.addAll(STATIC_CACHE_URLS);
       })
       .then(() => {
         console.log('[Service Worker] Installation complete');
-        return self.skipWaiting(); // Activate immediately
+        return self.skipWaiting();
       })
       .catch((error) => {
-        console.error('[Service Worker] Precaching failed:', error);
+        console.error('[Service Worker] Installation failed:', error);
       })
   );
 });
 
-// ============================================
 // Activate Event - Clean up old caches
-// ============================================
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activating...');
   
@@ -44,179 +43,205 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+          cacheNames
+            .filter((cacheName) => {
+              // Delete old cache versions
+              return cacheName.startsWith('voice-generator-') && 
+                     cacheName !== CACHE_NAME && 
+                     cacheName !== RUNTIME_CACHE;
+            })
+            .map((cacheName) => {
               console.log('[Service Worker] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
-            }
-          })
+            })
         );
       })
       .then(() => {
         console.log('[Service Worker] Activation complete');
-        return self.clients.claim(); // Take control immediately
+        return self.clients.claim();
       })
   );
 });
 
-// ============================================
-// Fetch Event - Network first, then cache
-// ============================================
+// Fetch Event - Network first, fall back to cache
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   // Skip cross-origin requests
-  if (url.origin !== location.origin) {
-    // Allow fonts from Google
-    if (url.origin === 'https://fonts.googleapis.com' || 
-        url.origin === 'https://fonts.gstatic.com') {
-      event.respondWith(
-        caches.match(request).then((response) => {
-          return response || fetch(request).then((response) => {
-            return caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, response.clone());
-              return response;
-            });
-          });
-        })
-      );
-    }
+  if (url.origin !== location.origin && !url.origin.includes('googleapis.com') && !url.origin.includes('gstatic.com')) {
     return;
   }
 
-  // For same-origin requests, use network-first strategy
+  // Skip chrome extensions
+  if (request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+
+  // API requests - Network only
+  if (request.url.includes('/api/') || request.url.includes('fish.audio')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Audio files - Cache first, then network
+  if (request.destination === 'audio' || request.url.includes('.mp3') || request.url.includes('.wav') || request.url.includes('.ogg')) {
+    event.respondWith(
+      caches.match(request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('[Service Worker] Serving audio from cache:', request.url);
+            return cachedResponse;
+          }
+
+          return fetch(request).then((response) => {
+            // Don't cache if not a valid response
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+
+            return response;
+          });
+        })
+    );
+    return;
+  }
+
+  // Everything else - Network first, fall back to cache
   event.respondWith(
-    networkFirst(request)
+    fetch(request)
+      .then((response) => {
+        // Don't cache if not a valid response
+        if (!response || response.status !== 200) {
+          return response;
+        }
+
+        // Clone the response
+        const responseToCache = response.clone();
+
+        // Cache for next time
+        caches.open(RUNTIME_CACHE)
+          .then((cache) => {
+            cache.put(request, responseToCache);
+          });
+
+        return response;
+      })
+      .catch(() => {
+        // Network failed, try cache
+        return caches.match(request)
+          .then((cachedResponse) => {
+            if (cachedResponse) {
+              console.log('[Service Worker] Serving from cache (offline):', request.url);
+              return cachedResponse;
+            }
+
+            // If no cache, return offline page
+            if (request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+
+            // Return a basic response for other requests
+            return new Response('Offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({
+                'Content-Type': 'text/plain'
+              })
+            });
+          });
+      })
   );
 });
 
-// ============================================
-// Network First Strategy
-// ============================================
-async function networkFirst(request) {
-  try {
-    // Try network first
-    const networkResponse = await fetch(request);
-    
-    // If successful, update cache
-    if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-    
-  } catch (error) {
-    // Network failed, try cache
-    console.log('[Service Worker] Network failed, trying cache:', request.url);
-    
-    const cachedResponse = await caches.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // If cache also fails, return offline page or error
-    return new Response(
-      JSON.stringify({
-        error: 'Offline',
-        message: 'אין חיבור לאינטרנט. חלק מהתכונות לא זמינות.'
-      }),
-      {
-        status: 503,
-        statusText: 'Service Unavailable',
-        headers: new Headers({
-          'Content-Type': 'application/json'
-        })
-      }
+// Message Event - Handle messages from clients
+self.addEventListener('message', (event) => {
+  console.log('[Service Worker] Message received:', event.data);
+
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('[Service Worker] Clearing cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        event.ports[0].postMessage({ success: true });
+      })
     );
   }
-}
 
-// ============================================
-// Cache First Strategy (for static assets)
-// ============================================
-async function cacheFirst(request) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    return cachedResponse;
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: CACHE_NAME });
   }
-  
-  try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse && networkResponse.status === 200) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-    
-  } catch (error) {
-    console.error('[Service Worker] Fetch failed:', error);
-    throw error;
-  }
-}
+});
 
-// ============================================
-// Background Sync (if needed in future)
-// ============================================
+// Background Sync - For future implementation
 self.addEventListener('sync', (event) => {
   console.log('[Service Worker] Background sync:', event.tag);
-  
+
   if (event.tag === 'sync-recordings') {
     event.waitUntil(syncRecordings());
   }
 });
 
 async function syncRecordings() {
-  // Placeholder for future background sync functionality
+  // Placeholder for background sync logic
   console.log('[Service Worker] Syncing recordings...');
-  return Promise.resolve();
+  // Could upload recordings to server when online
 }
 
-// ============================================
-// Push Notifications (optional)
-// ============================================
+// Push Notification - For future implementation
 self.addEventListener('push', (event) => {
   console.log('[Service Worker] Push notification received');
-  
-  if (!event.data) return;
-  
-  const data = event.data.json();
+
   const options = {
-    body: data.body || 'יש לך עדכון חדש',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-96.png',
+    body: event.data ? event.data.text() : 'התקבלה הודעה חדשה',
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
     vibrate: [200, 100, 200],
-    data: data,
+    tag: 'voice-notification',
+    requireInteraction: false,
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
     actions: [
       {
         action: 'open',
-        title: 'פתח'
+        title: 'פתח',
+        icon: '/icons/open.png'
       },
       {
         action: 'close',
-        title: 'סגור'
+        title: 'סגור',
+        icon: '/icons/close.png'
       }
     ]
   };
-  
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'מחולל קול AI', options)
+    self.registration.showNotification('🎤 מחולל קול AI', options)
   );
 });
 
-// ============================================
-// Notification Click Handler
-// ============================================
+// Notification Click - Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   console.log('[Service Worker] Notification clicked:', event.action);
-  
+
   event.notification.close();
-  
+
   if (event.action === 'open') {
     event.waitUntil(
       clients.openWindow('/')
@@ -224,44 +249,19 @@ self.addEventListener('notificationclick', (event) => {
   }
 });
 
-// ============================================
-// Message Handler (for communication with app)
-// ============================================
-self.addEventListener('message', (event) => {
-  console.log('[Service Worker] Message received:', event.data);
-  
-  if (event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+// Periodic Background Sync - For future implementation
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'check-updates') {
+    event.waitUntil(checkForUpdates());
   }
-  
-  if (event.data.type === 'CACHE_URLS') {
-    event.waitUntil(
-      caches.open(RUNTIME_CACHE)
-        .then((cache) => cache.addAll(event.data.urls))
-    );
-  }
-  
-  if (event.data.type === 'CLEAR_CACHE') {
-    event.waitUntil(
-      caches.keys()
-        .then((cacheNames) => {
-          return Promise.all(
-            cacheNames.map((cacheName) => caches.delete(cacheName))
-          );
-        })
-    );
-  }
-  
-  // Send response back to client
-  event.ports[0].postMessage({
-    type: 'ACK',
-    message: 'Message received'
-  });
 });
 
-// ============================================
-// Error Handler
-// ============================================
+async function checkForUpdates() {
+  console.log('[Service Worker] Checking for updates...');
+  // Could check for app updates
+}
+
+// Error Handling
 self.addEventListener('error', (event) => {
   console.error('[Service Worker] Error:', event.error);
 });
@@ -270,24 +270,6 @@ self.addEventListener('unhandledrejection', (event) => {
   console.error('[Service Worker] Unhandled rejection:', event.reason);
 });
 
-// ============================================
-// Periodic Background Sync (if supported)
-// ============================================
-self.addEventListener('periodicsync', (event) => {
-  console.log('[Service Worker] Periodic sync:', event.tag);
-  
-  if (event.tag === 'check-updates') {
-    event.waitUntil(checkForUpdates());
-  }
-});
-
-async function checkForUpdates() {
-  console.log('[Service Worker] Checking for updates...');
-  // Placeholder for update check logic
-  return Promise.resolve();
-}
-
-// ============================================
-// Service Worker Lifecycle Logging
-// ============================================
+// Logging
 console.log('[Service Worker] Script loaded');
+console.log('[Service Worker] Cache version:', CACHE_NAME);
